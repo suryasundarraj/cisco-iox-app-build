@@ -6,7 +6,7 @@
 Git, Vagrant and Virtualbox 
 
 ### MAC ARM based - M1/M2/M3:
-Git, Vagrant and VMWare Fusion 
+Git, Vagrant, VMWare Fusion and vagrant-vmware-desktop plugin
 
 # To build a custom app 
 
