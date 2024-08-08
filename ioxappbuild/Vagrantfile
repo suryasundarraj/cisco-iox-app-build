@@ -1,0 +1,95 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# All Vagrant configuration is done below. The "2" in Vagrant.configure
+# configures the configuration version (we support older styles for
+# backwards compatibility). Please don't change it unless you know what
+# you're doing.
+Vagrant.configure('2') do |config|
+    arch = `arch`.strip()
+    if arch == 'arm64'
+      puts "This appears to be an ARM64 machine! ..."
+      config.vm.box = 'gyptazy/ubuntu22.04-arm64'
+      config.vm.boot_timeout = 600
+      config.vm.provider "vmware_fusion" do |vf|
+        #vf.gui = true
+        vf.memory = "8192"
+        vf.cpus = "4"
+      end
+      config.vm.define :ioxappbuild
+    else
+      puts "Assuming this to be an Intel x86 machine! ..."
+      config.vm.box = "bento/ubuntu-22.04"
+      config.vm.network "public_network", bridge: "ens192"
+      config.vm.boot_timeout = 600
+      config.vm.provider "virtualbox" do |vb|
+        #vb.gui = true
+        vb.memory = "8192"
+        vb.cpus = "4"
+      end
+      config.vm.define :ioxappbuild
+    end
+  
+    config.vm.provision "shell", inline: <<-SHELL
+      #!/bin/bash
+      # apt-cache madison docker-ce
+      export VER="5:24.0.9-1~ubuntu.22.04~jammy"
+      echo "!!! installing dependencies and packages !!!"
+      apt-get update
+      apt-get install -y ca-certificates curl unzip git pcregrep
+      install -m 0755 -d /etc/apt/keyrings
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+      chmod a+r /etc/apt/keyrings/docker.asc
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" |  tee /etc/apt/sources.list.d/docker.list > /dev/null
+      apt-get update
+      apt-get install -y qemu binfmt-support qemu-user-static
+      apt-get install -y docker-ce=$VER docker-ce-cli=$VER docker-ce-rootless-extras=$VER containerd.io docker-buildx-plugin docker-compose-plugin
+      # apt-get install -y docker.io docker-compose docker-buildx
+      usermod -aG docker vagrant
+      echo "!!! generating .ioxclientcfg.yaml file !!!"
+      echo 'global:' > /home/vagrant/.ioxclientcfg.yaml
+      echo '  version: "1.0"' >> /home/vagrant/.ioxclientcfg.yaml
+      echo '  active: default' >> /home/vagrant/.ioxclientcfg.yaml
+      echo '  debug: false' >> /home/vagrant/.ioxclientcfg.yaml
+      echo '  fogportalprofile:' >> /home/vagrant/.ioxclientcfg.yaml
+      echo '    fogpip: ""' >> /home/vagrant/.ioxclientcfg.yaml
+      echo '    fogpport: ""' >> /home/vagrant/.ioxclientcfg.yaml
+      echo '    fogpapiprefix: ""' >> /home/vagrant/.ioxclientcfg.yaml
+      echo '    fogpurlscheme: ""' >> /home/vagrant/.ioxclientcfg.yaml
+      echo '  dockerconfig:' >> /home/vagrant/.ioxclientcfg.yaml
+      echo '    server_uri: unix:///var/run/docker.sock' >> /home/vagrant/.ioxclientcfg.yaml
+      echo '    api_version: "1.22"' >> /home/vagrant/.ioxclientcfg.yaml
+      echo 'author:' >> /home/vagrant/.ioxclientcfg.yaml
+      echo '  name: |' >> /home/vagrant/.ioxclientcfg.yaml
+      echo '    Home' >> /home/vagrant/.ioxclientcfg.yaml
+      echo '  link: localhost' >> /home/vagrant/.ioxclientcfg.yaml
+      echo 'profiles: {default: {host_ip: 127.0.0.1, host_port: 8443, auth_keys: cm9vdDpyb290,' >> /home/vagrant/.ioxclientcfg.yaml
+      echo '    auth_token: "", local_repo: /software/downloads, api_prefix: /iox/api/v2/hosting/,' >> /home/vagrant/.ioxclientcfg.yaml
+      echo '    url_scheme: https, ssh_port: 2222, rsa_key: "", certificate: "", cpu_architecture: "",' >> /home/vagrant/.ioxclientcfg.yaml
+      echo '    middleware: {mw_ip: "", mw_port: "", mw_baseuri: "", mw_urlscheme: "", mw_access_token: ""},' >> /home/vagrant/.ioxclientcfg.yaml
+      echo '    conn_timeout: 1000, client_auth: "no", client_cert: "", client_key: ""}}' >> /home/vagrant/.ioxclientcfg.yaml
+      cp /home/vagrant/.ioxclientcfg.yaml /root/.ioxclientcfg.yaml
+      chown vagrant:vagrant /home/vagrant/.ioxclientcfg.yaml
+      arch=$(uname -m)
+      if [[ $arch == x86_64 ]]; then
+        # download page https://developer.cisco.com/docs/iox/iox-resource-downloads/
+        echo "!!! downloading and extracting ioxclient for x86_64 architecture !!!"
+        curl -O https://pubhub.devnetcloud.com/media/iox/docs/artifacts/ioxclient/ioxclient-v1.17.0.0/ioxclient_1.17.0.0_linux_amd64.tar.gz
+        tar -xvf /home/vagrant/ioxclient_1.17.0.0_linux_amd64.tar.gz
+        cp /home/vagrant/ioxclient_1.17.0.0_linux_amd64/ioxclient /usr/local/bin/ioxclient
+        rm -rv /home/vagrant/ioxclient_1.17.0.0_linux_amd64
+      elif  [[ $arch = aarch64 ]]; then
+        # download page https://developer.cisco.com/docs/iox/iox-resource-downloads/
+        echo "!!! downloading and extracting ioxclient for arm64 architecture !!!"
+        curl -O https://pubhub.devnetcloud.com/media/iox/docs/artifacts/ioxclient/ioxclient-v1.17.0.0/ioxclient_1.17.0.0_linux_arm64.tar.gz
+        tar -xvf /home/vagrant/ioxclient_1.17.0.0_linux_arm64.tar.gz
+        cp /home/vagrant/ioxclient_1.17.0.0_linux_arm64/ioxclient /usr/local/bin/ioxclient
+        rm -rv /home/vagrant/ioxclient_1.17.0.0_linux_arm64
+      fi
+      chown vagrant:vagrant /usr/local/bin/ioxclient
+      echo "!!! pulling and packaging the app for x86_64 architecture !!!"
+      docker pull --platform=linux/amd64 mlabbe/iperf3
+      ioxclient docker package mlabbe/iperf3 .
+      cp package.tar /vagrant/iperf3_amd64-$(echo $VER | pcregrep -o1 ':([0-9.-]+)~').tar
+    SHELL
+end
