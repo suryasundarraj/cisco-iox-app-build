@@ -48,6 +48,9 @@ Step 5: Build the package to deploy
 
 `
 vagrant@vagrant:/vagrant/app$ mkdir pkg
+`
+
+`
 vagrant@vagrant:/vagrant/app$ ioxclient docker pkg app pkg/
 `
 
