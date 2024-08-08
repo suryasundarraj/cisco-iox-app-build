@@ -1,6 +1,4 @@
-# cisco-iox-app-build
-
-# Cisco IOx Applications build using Vagrant
+# Cisco IOx Application building using Vagrant
 
 ## Recommeded Softwares to be installed: 
 
