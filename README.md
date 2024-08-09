@@ -1,5 +1,7 @@
 # Cisco IOx Application building using Vagrant
 
+In this tutorial, we will go through how to build a sample docker type application using the Docker development environment, vagrant and package it to an IOx application 
+
 ## Recommeded Softwares to be installed: 
 
 ### Windows/ MAC Intel/ Linux: 
